@@ -12,7 +12,7 @@
 }
 
 .container-modal .modal-body {
-    padding: 20px!important;
+    padding: 20px !important;
 }
 
 .container-modal .title {
@@ -75,7 +75,8 @@
 }
 
 .container-modal .button,
-.container-modal .rerun-button {
+.container-modal .rerun-button,
+.container-modal .pay-button {
     padding: 5px 10px;
     border: 2px solid #59ab6e;
     border-radius: 3px;
@@ -95,7 +96,7 @@
     box-shadow: 0px 10px 15px -6px rgba(0, 0, 0, 0.2);
 }
 
-.container-modal .button:hover {
+.container-modal .button:hover .container-modal .pay-button:hover {
     background: #ffffff;
     color: #59ab6e;
 }
@@ -145,7 +146,7 @@
 
 .container-modal .modal-body {
     background: white;
-    padding: 0!important;
+    padding: 0 !important;
     box-shadow: 0px 50px 30px -30px rgba(0, 0, 0, 0.3);
     margin-bottom: 50px;
     position: absolute;
@@ -247,7 +248,7 @@
 }
 
 .payuni-card-item label {
-    font-size: 10px!important;
+    font-size: 10px !important;
 }
 
 .container-modal .disabled {
@@ -258,4 +259,76 @@
 .container-modal .button.disabled:hover {
     background: #59ab6e;
     color: #ffffff;
+}
+
+.container-modal .modal-loader {
+    display: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgb(0 0 0 / 80%);
+}
+
+.container-modal .modal-loader .fa-spinner {
+    font-size: 60px;
+    color: #59ab6e;
+}
+
+.container-modal .modal-loader .modal-loader-content {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.container-modal .circle-wrapper {
+    position: relative;
+    width: 100px;
+    height: 100px;
+}
+
+.container-modal .icon {
+    position: absolute;
+    color: #fff;
+    font-size: 55px !important;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+.container-modal .circle {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    padding: 2.5px;
+    background-clip: content-box;
+    animation: spin 10s linear infinite;
+}
+
+.container-modal .circle-wrapper:active .circle {
+    animation: spin 2s linear infinite;
+}
+
+.container-modal .success {
+    background-color: #59ab6e;
+    border: 2.5px dashed #59ab6e;
+}
+
+.container-modal .error {
+    background-color: #dc3545;
+    border: 2.5px dashed #dc3545;
+}
+
+.container-modal .warning {
+    background-color: #ede861;
+    border: 2.5px dashed #ede861;
+}
+
+@keyframes spin {
+    100% {
+        transform: rotateZ(360deg);
+    }
 }

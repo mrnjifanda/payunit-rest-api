@@ -1,4 +1,5 @@
 let transaction = null
+let transactionTimer = 0
 
 function addAppFormLoader(element) {
     const elements = element.querySelectorAll('input, textarea, button, select, a');
@@ -41,6 +42,11 @@ $('.container-modal').on('click', '.button', function () {
         stepIndex = $step.index(),
         $pag = $('.modal-header span').eq(stepIndex);
 
+
+    if($btn.text() === 'Done!') {
+        step3($step, $pag)
+    }
+
     if (stepIndex === 0) {
         if (!$('.container-modal .modal-body-step-1 .button').hasClass("disabled")) {
             
@@ -52,11 +58,11 @@ $('.container-modal').on('click', '.button', function () {
         return
     }
 
-    if (stepIndex === 0 || stepIndex === 1) {
-        step1($step, $pag);
-    } else {
-        step3($step, $pag);
-    }
+    // if (stepIndex === 0 || stepIndex === 1) {
+    //     step1($step, $pag);
+    // } else {
+    //     step3($step, $pag);
+    // }
 });
 
 $('.container-modal').on('click', '.payuni-card-item', function () {
@@ -74,14 +80,12 @@ $('.container-modal').on('click', '.payuni-card-item', function () {
         $card.addClass("border border-success")
         transaction.gateway = $card.attr("data-gateway")
         transaction.logo = $card.find('img')[0].src
-        console.log(transaction)
         $('.container-modal .modal-body-step-1 .button').removeClass("disabled")
     }
 });
 
 
 function step1($step, $pag) {
-    console.log('step1');
     // animate the step out
     $step.addClass('animate-out');
 
@@ -97,19 +101,18 @@ function step1($step, $pag) {
     setTimeout(function () {
         $step.next().removeClass('animate-in')
             .addClass('is-showing');
-
     }, 1200);
 }
 
 
 function step3($step, $pag) {
-    console.log('3');
-
     // animate the step out
     $step.parents('.modal-wrap').addClass('animate-up');
 
     setTimeout(function () {
-        $('.rerun-button').css('display', 'inline-block');
+        $('.container-modal').fadeOut()
+        transaction = null
+        transactionTimer = 0
     }, 300);
 }
 
@@ -125,9 +128,7 @@ $('.container-modal').on('click', '.rerun-button', function () {
 });
 
 
-/**
- * 
- */
+/***/
 
 function step_one(data) {
     const modal = document.querySelector(".container-modal")
@@ -144,7 +145,7 @@ function step_one(data) {
     })
 
     content += `</ul></div>
-        <div class="text-center mb-5">
+        <div class="text-center mb-4">
             <div class="button disabled">Next Step</div>
         </div>`
 
@@ -152,26 +153,64 @@ function step_one(data) {
 }
 
 function step_two(transaction) {
-    console.log('eric')
     const modal = document.querySelector(".container-modal")
     const step2 = modal.querySelector(".modal-body-step-2")
-    const name = transaction.gateway === "eu" ? `<input type="text" placeholder="Enter your name" required />` : ''
+    const name = transaction.gateway === "eu" ? `<input type="text" placeholder="Enter your name" name="name" required />` : ''
 
-    step2.querySelector(".step-content").innerHTML = `<form action="http://localhost:6200/checkout" method="POST">
+    $('.modal-loader').hide()
+    step2.querySelector(".step-content").innerHTML = `<form action="http://localhost:6200/checkout" method="POST" id="pay-checkout">
         <div class="card-body pb-0 text-center">
             <img src="${transaction.logo}" alt="${transaction.gateway}" style="height: 100px;">
             <h4 class="mt-3">Total: <strong class="text-success" style="font-size: 40px;">${transaction.amount}</strong> ${(transaction.currency || "XAF")}<h4>
         </div>
         <div style="margin-top: 20px; padding: 0 30px">
-            <input type="hidden" name="transaction" value="${JSON.stringify(transaction)}" />
+            <input type="hidden" name="transaction" value='${JSON.stringify(transaction)}' />
             ${name}
-            <input type="number" placeholder="Enter the phone number" required />
+            <input type="number" placeholder="Enter the phone number" name="phone" required />
         </div>
-        <div class="text-center mb-5" style="display: flex; justify-content: space-be">
+        <div class="text-center mb-4" style="display: flex; justify-content: space-between; padding: 0 30px">
             <button type="button" class="rerun-button mr-1"><i class="fas fa-chevron-left"></i></button>
-            <button type="submit" class="button">Pay now</button>
+            <button type="submit" class="pay-button">Pay now</button>
         </div>
     </form>`
+}
+
+function check_status_transaction(submitForm, status) {
+
+    if (submitForm.gateway !== 'orange' && submitForm.gateway !== 'mtnmomo') {
+        return false
+    }
+
+    let form_data = new FormData();
+
+    for ( var key in submitForm ) {
+        form_data.append(key, submitForm[key]);
+    }
+
+    $.ajax({
+        type: `POST`,
+        url: `http://localhost:6200/check-transation`,
+        data: form_data,
+        processData: false,
+        contentType: false,
+        cache: false
+    })
+    .done(function(data, text, jqxhr) {
+    
+        if (data.status === 'SUCCESSFUL' || data.status === 'SUCCESSFULL') {
+
+            finaly_step_status(data.status, data.message, status)
+        } else if (data.status === 'FAILED' || transactionTimer === 200) {
+
+            finaly_step_status('FAILED', 'You did not confirm the transaction on your phone. Please try again !!!', status)
+        }
+
+
+    })
+    .fail(function(jqxhr) {
+
+        console.log(jqxhr)
+    })
 }
 
 function htmlCard(logo, short, name) {
@@ -187,15 +226,59 @@ function htmlCard(logo, short, name) {
     </li>`
 }
 
+function finaly_step_status(status, message, timer) {
+    const modal = document.querySelector(".container-modal")
+    const step3 = modal.querySelector(".modal-body-step-3")
+    const title = step3.querySelector('.title')
+
+    let icon = ''
+    let statusIcon = ''
+
+    if (status === "SUCCESSFUL" || status === "SUCCESSFULL") {
+        icon = 'check'
+        statusIcon = 'success'
+        title.classList = 'title'
+    } else if(status === "PENDING") {
+        icon = 'exclamation'
+        statusIcon = 'warning'
+
+        title.classList = 'title'
+        title.classList.add('text-warning')
+    } else {
+        icon = 'times'
+        statusIcon = 'error'
+
+        title.classList = 'title'
+        title.classList.add('text-danger')
+    }
+
+    title.innerText = status
+    step3.querySelector('.description').innerHTML = `<div class="d-flex justify-content-center mt-5 mb-4">
+        <div class="circle-wrapper">
+            <div class="${statusIcon} circle"></div>
+            <div class="icon">
+                <i class="fa fa-${icon}"></i>
+            </div>
+        </div>
+    </div>
+
+    <p class="mt-3">${message}</p>
+
+    <div class="text-center mb-4 mt-5">
+        <div class="button">Done!</div>
+    </div>`
+
+    clearInterval(timer)
+    const $step = $('.modal-body.modal-body-step-2.is-showing')
+    const stepIndex = $step.index()
+    const $pag = $('.modal-header span').eq(stepIndex);
+    step1($step, $pag)
+}
+
 const payForm = document.getElementById('pay-form')
 payForm.addEventListener('submit', async function (e) {
 
     e.preventDefault()
-
-    if (!window.fetch) {
-        alert('Navigateur trop vieux')
-        return false
-    }
 
     const formData = new FormData(payForm)
 
@@ -216,6 +299,12 @@ payForm.addEventListener('submit', async function (e) {
 
             transaction = data.transaction
             step_one(data.data)
+
+            document.querySelector('.container-modal .modal-wrap').classList.remove('animate-up')
+
+            $('.modal-body').removeClass('is-showing')
+            $('.modal-body.modal-body-step-1').addClass('is-showing')
+            document.querySelector('.container-modal .modal-wrap').classList.remove('animate-up')
             $(".container-modal").fadeIn()
         } else {
 
@@ -231,4 +320,54 @@ payForm.addEventListener('submit', async function (e) {
     .always(function() {
         removeAppFormLoader(form);
     });
+})
+
+$('.container-modal').on('submit', '#pay-checkout', function (e) {
+    e.preventDefault()
+
+    const form = this
+    const data = new FormData(form)
+
+    addAppFormLoader(form)
+
+    $.ajax({
+        type: form.method,
+        url: form.action,
+        data: data,
+        processData: false,
+        contentType: false,
+        cache: false,
+    })
+    .done(function(data, text, jqxhr) {
+
+        if ((data.status === "SUCCESS" || data.status === "PENDING") || data.statusCode ===  200) {
+
+            $('.container-modal .modal-loader .modal-loader-content p').text(data.message)
+            $('.container-modal .modal-loader').fadeIn()
+
+            addAppFormLoader(form)
+            const status = setInterval(async () => {
+
+                const bodyForm = data.data
+                bodyForm.gateway = transaction.gateway
+                bodyForm.transaction_id = transaction.id
+                transactionTimer += 10
+                check_status_transaction(bodyForm, status)
+            }, 10000);
+            
+        } else {
+
+            alert(text)
+            console.log(data)
+            console.log(text)
+            console.log(jqxhr)
+        }
+    })
+    .fail(function(jqxhr) {
+        console.log(jqxhr)
+    })
+    .always(function() {
+        removeAppFormLoader(form)
+    })
+
 })
